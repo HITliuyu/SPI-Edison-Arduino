@@ -3,8 +3,6 @@
 #include <unistd.h>
 
 #define BUFFSIZE 30
-//|0.humidity|1.temperature|2.3.4.5.ratio0|6.7.8.9.ratio1|10.11.12.13.ratio2|14.15.CO2PPM|16.17.18.19.RangInCM|20.21.22.23.concentration|
-//|24.25.light.visible|26.27.light.IR|28.29.light.UV*100|
 typedef union cvtfloat {
     float val;
     unsigned char bytes[4];
@@ -45,7 +43,7 @@ int main() {
  mraa_gpio_use_mmaped(MISO, 1);
  mraa_gpio_dir(MISO, MRAA_GPIO_IN);
  mraa_gpio_read(MISO);
- int delay = 100;
+ int delay = 1000;
  uint8_t read;
  int cycle=0;
  uint8_t read_data[BUFFSIZE];
@@ -56,6 +54,7 @@ int main() {
  {
     int i, j;
     char c = 'a';
+    uint8_t checksum = 0;
     mraa_gpio_write(CS1, 0);
     sendbyte(c, delay);
     usleep(100);
@@ -63,10 +62,20 @@ int main() {
     sendbyte(byte, delay);
     for(i=0; i<BUFFSIZE; i++)
     {   
-        usleep(10);
+        usleep(100);
         byte = 10;
         read_data[i] = sendbyte(byte, delay);
-        
+        checksum += read_data[i];
+    }
+    usleep(100);
+    printf("======================\n");
+    if ((checksum & 0xff) == sendbyte(byte, delay))
+    {
+        printf("checksum matches!\n");
+    }
+    else
+    {
+        printf("checksum ERROR!\n");
     }
     mraa_gpio_write(CS1, 1);
     printf("recv %d  %d\n", read_data[0], read_data[1]);
@@ -118,7 +127,7 @@ int main() {
     printf("UV light is %f \n", (float)myint.val/100);
 
     printf("cycle %d\n", cycle++);
-    sleep(3);
+    sleep(5);
 
  }
  return MRAA_SUCCESS;

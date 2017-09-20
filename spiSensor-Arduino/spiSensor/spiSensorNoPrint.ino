@@ -67,6 +67,7 @@ uint8_t sensorData [BUFFSIZE];
 byte command = 0;
 int cycle;
 int i;
+byte checksum;
 
 void setup (void)
 {
@@ -78,7 +79,7 @@ void setup (void)
     //multichannel gas sensor
     gas.begin(0x04);//the default I2C address of the slave is 0x04
     gas.powerOn();
-    Serial.println(gas.getVersion());
+//    Serial.println(gas.getVersion());
   
     //CO2 sensor
     sensor.begin(9600);
@@ -98,6 +99,7 @@ void setup (void)
     //variable initialization
     cycle = 0;
     i = 0;
+    checksum = 0;
     // turn on SPI in slave mode
     SPCR |= bit (SPE);
   
@@ -130,8 +132,16 @@ ISR (SPI_STC_vect)
       
     // transmit buffered data
     case 'a':
-      SPDR = sensorData[i];
-      i++;
+      if (i < BUFFSIZE)
+      {
+          SPDR = sensorData[i];
+          checksum += sensorData[i];
+          i++;
+      }
+      else
+      {
+          SPDR = (checksum & 0xff);      
+      } 
       break;
   
     } // end of switch
@@ -142,14 +152,14 @@ ISR (SPI_STC_vect)
 // main loop - wait for flag set in interrupt routine
 void loop (void)
 {
-    Serial.println(cycle);
+//    Serial.println(cycle);
     //temperature and humidity
     sensorData[0] = dht.readHumidity();
     sensorData[1] = dht.readTemperature();
-    Serial.print("Real sensor data: ");
-    Serial.print(sensorData[0]);
-    Serial.print("   ");
-    Serial.println(sensorData[1]);
+//    Serial.print("Real sensor data: ");
+//    Serial.print(sensorData[0]);
+//    Serial.print("   ");
+//    Serial.println(sensorData[1]);
 
      //multichannel sensor
     float c;
@@ -205,54 +215,54 @@ void loop (void)
 */
     //display ratio values
     c = gas.measure_RATIO_0();
-    Serial.print("The ratio0 is ");
+//    Serial.print("The ratio0 is ");
     if(c>=0) 
     {
-        Serial.print(c);
+//        Serial.print(c);
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
             sensorData[j+2] = myfloat.bytes[j];
         }
     }
-    else Serial.print("invalid");
-    Serial.println(" ");
+//    else Serial.print("invalid");
+//    Serial.println(" ");
 
     c = gas.measure_RATIO_1();
-    Serial.print("The ratio1 is ");
+//    Serial.print("The ratio1 is ");
     if(c>=0) 
     {
-        Serial.print(c);
+//        Serial.print(c);
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
             sensorData[j+6] = myfloat.bytes[j];
         }
     }
-    else Serial.print("invalid");
-    Serial.println(" ");
+//    else Serial.print("invalid");
+//    Serial.println(" ");
     
     
     c = gas.measure_RATIO_2();
-    Serial.print("The ratio2 is ");
+//    Serial.print("The ratio2 is ");
     if(c>=0) 
     {
-        Serial.print(c);
+//        Serial.print(c);
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
             sensorData[j+10] = myfloat.bytes[j];
         }
     }
-    else Serial.print("invalid");
-    Serial.println(" ");
+//    else Serial.print("invalid");
+//    Serial.println(" ");
     
     //CO2 sensor
     if(CO2dataRecieve())
     {
-        Serial.print("  CO2: ");
-        Serial.print(CO2PPM);
-        Serial.println("");
+//        Serial.print("  CO2: ");
+//        Serial.print(CO2PPM);
+//        Serial.println("");
         myint.val = CO2PPM;
         sensorData[14] = myint.bytes[0];
         sensorData[15] = myint.bytes[1];
@@ -260,9 +270,9 @@ void loop (void)
   
     //ultrasonic sensor
     RangeInCM = ultrasonic.MeasureInCentimeters();
-    Serial.print("Range is ");
-    Serial.print(RangeInCM);
-    Serial.print(" cm\n");
+//    Serial.print("Range is ");
+//    Serial.print(RangeInCM);
+//    Serial.print(" cm\n");
     mylong.val = RangeInCM;
     for(j = 0; j < 4; j++)
     {
@@ -282,13 +292,13 @@ void loop (void)
         {
           sensorData[j+20] = myfloat.bytes[j];
         }
-        Serial.print("ratio = ");
-        Serial.print(ratio);
-        Serial.print("\t");
-        Serial.print("concentration = ");
-        Serial.print(concentration);
-        Serial.println(" pcs/0.01cf");
-        Serial.println("\n");
+//        Serial.print("ratio = ");
+//        Serial.print(ratio);
+//        Serial.print("\t");
+//        Serial.print("concentration = ");
+//        Serial.print(concentration);
+//        Serial.println(" pcs/0.01cf");
+//        Serial.println("\n");
         lowpulseoccupancy = 0;
         starttime = millis();
     }
@@ -297,20 +307,20 @@ void loop (void)
     myint.val = sunlight.ReadVisible();
     sensorData[24] = myint.bytes[0];
     sensorData[25] = myint.bytes[1];
-    Serial.print("Vis: "); 
+//    Serial.print("Vis: "); 
         
     myint.val = sunlight.ReadIR();
     sensorData[26] = myint.bytes[0];
     sensorData[27] = myint.bytes[1];
-    Serial.print("IR: "); Serial.println(myint.val);
+//    Serial.print("IR: "); Serial.println(myint.val);
     
     //the real UV value must be div 100 from the reg value , datasheet for more information.
     myint.val = sunlight.ReadUV();
     sensorData[28] = myint.bytes[0];
     sensorData[29] = myint.bytes[1];
-    Serial.print("UV: "); Serial.println((float)myint.val/100);
+//    Serial.print("UV: "); Serial.println((float)myint.val/100);
     
-//    delay(3000);
+    delay(5000);
  }  // end of loop
 
  // start of transaction, no command yet
@@ -318,6 +328,7 @@ void resetParam ()
 {
   command = 0;
   i=0;
+  checksum = 0;
 }  // end of interrupt service routine (ISR) resetParam
 
 //CO2 sensor data
@@ -343,14 +354,14 @@ bool CO2dataRecieve(void)
             }
         }
     }
-
+/*
     for(int j=0; j<9; j++)
     {
         Serial.print(data[j]);
         Serial.print(" ");
     }
     Serial.println("");
-
+*/
     if((i != 9) || (1 + (0xFF ^ (byte)(data[1] + data[2] + data[3] + data[4] + data[5] + data[6] + data[7]))) != data[8])
     {
         return false;
