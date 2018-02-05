@@ -135,7 +135,7 @@ ISR (SPI_STC_vect)
       break;
   
     } // end of switch
-    cycle++;
+    // cycle++;
         
 }  // end of interrupt routine SPI_STC_vect
 
