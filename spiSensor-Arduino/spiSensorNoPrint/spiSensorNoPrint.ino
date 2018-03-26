@@ -15,7 +15,7 @@
 #define DHTTYPE DHT11   // DHT 11 
 #define sensor s_serial
 #define SS 10 //slave select pin
-#define BUFFSIZE 30
+#define BUFFSIZE 26
 //union definition
 union cvtfloat {
     float val;
@@ -60,12 +60,11 @@ float concentration = 0;
 SI114X sunlight = SI114X();
 
 //buffer used to store sensor data
-//|0.humidity|1.temperature|2.3.4.5.ratio0|6.7.8.9.ratio1|10.11.12.13.ratio2|14.15.CO2PPM|16.17.18.19.RangInCM|20.21.22.23.concentration|
-//|24.25.light.visible|26.27.light.IR|28.29.light.UV*100|
+//|0.humidity|1.temperature|2.3.4.5.ratio0|6.7.8.9.ratio1|10.11.12.13.ratio2|14.15.CO2PPM|16.17.18.19.concentration|20.21.light.visible|22.23.light.IR|
+//|24.25.light.UV*100|
 uint8_t sensorData [BUFFSIZE];
 
 byte command = 0;
-int cycle;
 int i;
 byte checksum;
 
@@ -97,7 +96,6 @@ void setup (void)
       sunlight.Begin();
     }
     //variable initialization
-    cycle = 0;
     i = 0;
     checksum = 0;
     // turn on SPI in slave mode
@@ -144,15 +142,12 @@ ISR (SPI_STC_vect)
       } 
       break;
   
-    } // end of switch
-//    cycle++;
-        
+    } // end of switch        
 }  // end of interrupt routine SPI_STC_vect
 
 // main loop - wait for flag set in interrupt routine
 void loop (void)
 {
-//    Serial.println(cycle);
     //temperature and humidity
     sensorData[0] = dht.readHumidity();
     sensorData[1] = dht.readTemperature();
@@ -268,16 +263,16 @@ void loop (void)
         sensorData[15] = myint.bytes[1];
     }
   
-    //ultrasonic sensor
-    RangeInCM = ultrasonic.MeasureInCentimeters();
-//    Serial.print("Range is ");
-//    Serial.print(RangeInCM);
-//    Serial.print(" cm\n");
-    mylong.val = RangeInCM;
-    for(j = 0; j < 4; j++)
-    {
-      sensorData[j+16] = mylong.bytes[j];
-    }
+//    //ultrasonic sensor
+//    RangeInCM = ultrasonic.MeasureInCentimeters();
+////    Serial.print("Range is ");
+////    Serial.print(RangeInCM);
+////    Serial.print(" cm\n");
+//    mylong.val = RangeInCM;
+//    for(j = 0; j < 4; j++)
+//    {
+//      sensorData[j+16] = mylong.bytes[j];
+//    }
     
     //PM sensor
     duration = pulseIn(pin, LOW);
@@ -290,7 +285,7 @@ void loop (void)
         myfloat.val = concentration;
         for(j = 0; j < 4; j++)
         {
-          sensorData[j+20] = myfloat.bytes[j];
+          sensorData[j+16] = myfloat.bytes[j];
         }
 //        Serial.print("ratio = ");
 //        Serial.print(ratio);
@@ -305,19 +300,19 @@ void loop (void)
 
     //sunlight sensor
     myint.val = sunlight.ReadVisible();
-    sensorData[24] = myint.bytes[0];
-    sensorData[25] = myint.bytes[1];
+    sensorData[20] = myint.bytes[0];
+    sensorData[21] = myint.bytes[1];
 //    Serial.print("Vis: "); 
         
     myint.val = sunlight.ReadIR();
-    sensorData[26] = myint.bytes[0];
-    sensorData[27] = myint.bytes[1];
+    sensorData[22] = myint.bytes[0];
+    sensorData[23] = myint.bytes[1];
 //    Serial.print("IR: "); Serial.println(myint.val);
     
     //the real UV value must be div 100 from the reg value , datasheet for more information.
     myint.val = sunlight.ReadUV();
-    sensorData[28] = myint.bytes[0];
-    sensorData[29] = myint.bytes[1];
+    sensorData[24] = myint.bytes[0];
+    sensorData[25] = myint.bytes[1];
 //    Serial.print("UV: "); Serial.println((float)myint.val/100);
     
     delay(5000);
