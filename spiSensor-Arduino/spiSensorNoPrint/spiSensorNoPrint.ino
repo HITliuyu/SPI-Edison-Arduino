@@ -275,11 +275,12 @@ void loop (void)
 //    }
     
     //PM sensor
-    duration = pulseIn(pin, LOW);
-    lowpulseoccupancy = lowpulseoccupancy+duration;
-  
-    if ((millis()-starttime) >= sampletime_ms)//if the sampel time = = sampletime_ms
-    {
+    do{
+      duration = pulseIn(pin, LOW);
+      lowpulseoccupancy = lowpulseoccupancy+duration;
+    }while((millis()-starttime) <= sampletime_ms);
+//    if ((millis()-starttime) >= sampletime_ms)//if the sampel time = = sampletime_ms
+//    {
         ratio = lowpulseoccupancy/(sampletime_ms*10.0);  // Integer percentage 0=&gt;100
         concentration = 1.1*pow(ratio,3)-3.8*pow(ratio,2)+520*ratio+0.62; // using spec sheet curve
         myfloat.val = concentration;
@@ -296,7 +297,7 @@ void loop (void)
 //        Serial.println("\n");
         lowpulseoccupancy = 0;
         starttime = millis();
-    }
+//    }
 
     //sunlight sensor
     myint.val = sunlight.ReadVisible();
@@ -315,7 +316,7 @@ void loop (void)
     sensorData[25] = myint.bytes[1];
 //    Serial.print("UV: "); Serial.println((float)myint.val/100);
     
-    delay(5000);
+//    delay(5000);
  }  // end of loop
 
  // start of transaction, no command yet
