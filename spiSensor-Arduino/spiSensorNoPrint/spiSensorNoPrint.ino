@@ -12,10 +12,10 @@
 #include "SI114X.h" //sunlight
 
 #define DHTPIN A0 
-#define DHTTYPE DHT11   // DHT 11 
+#define DHTTYPE DHT22   // DHT 11 
 #define sensor s_serial
 #define SS 10 //slave select pin
-#define BUFFSIZE 26
+#define BUFFSIZE 32
 //union definition
 union cvtfloat {
     float val;
@@ -60,8 +60,8 @@ float concentration = 0;
 SI114X sunlight = SI114X();
 
 //buffer used to store sensor data
-//|0.humidity|1.temperature|2.3.4.5.ratio0|6.7.8.9.ratio1|10.11.12.13.ratio2|14.15.CO2PPM|16.17.18.19.concentration|20.21.light.visible|22.23.light.IR|
-//|24.25.light.UV*100|
+//|0123.humidity|4567.temperature|8.9.10.11.ratio0|12.13.14.15.ratio1|16.17.18.19.ratio2|20.21.CO2PPM|22.23.24.25.PM concentration|26.27.light.visible|28.29.light.IR|
+//|30.31.light.UV*100|
 uint8_t sensorData [BUFFSIZE];
 
 byte command = 0;
@@ -149,16 +149,23 @@ ISR (SPI_STC_vect)
 void loop (void)
 {
     //temperature and humidity
-    sensorData[0] = dht.readHumidity();
-    sensorData[1] = dht.readTemperature();
-//    Serial.print("Real sensor data: ");
-//    Serial.print(sensorData[0]);
-//    Serial.print("   ");
-//    Serial.println(sensorData[1]);
-
-     //multichannel sensor
-    float c;
+    float c;//variable to store value
+    c = dht.readHumidity();
     int j; //convert float to char counter
+    myfloat.val = c;
+    for (j = 0; j < 4; j++)
+    {
+        sensorData[j] = myfloat.bytes[j];
+    }
+    
+    c = dht.readTemperature();
+    myfloat.val = c;
+    for (j = 0; j < 4; j++)
+    {
+        sensorData[j+4] = myfloat.bytes[j];
+    }
+    
+     //multichannel sensor
 /*    
     c = gas.measure_NH3();
     Serial.print("The concentration of NH3 is ");
@@ -217,7 +224,7 @@ void loop (void)
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
-            sensorData[j+2] = myfloat.bytes[j];
+            sensorData[j+8] = myfloat.bytes[j];
         }
     }
 //    else Serial.print("invalid");
@@ -231,7 +238,7 @@ void loop (void)
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
-            sensorData[j+6] = myfloat.bytes[j];
+            sensorData[j+12] = myfloat.bytes[j];
         }
     }
 //    else Serial.print("invalid");
@@ -246,7 +253,7 @@ void loop (void)
         myfloat.val = c;
         for(j = 0; j < 4; j++)
         {
-            sensorData[j+10] = myfloat.bytes[j];
+            sensorData[j+16] = myfloat.bytes[j];
         }
     }
 //    else Serial.print("invalid");
@@ -259,8 +266,8 @@ void loop (void)
 //        Serial.print(CO2PPM);
 //        Serial.println("");
         myint.val = CO2PPM;
-        sensorData[14] = myint.bytes[0];
-        sensorData[15] = myint.bytes[1];
+        sensorData[20] = myint.bytes[0];
+        sensorData[21] = myint.bytes[1];
     }
   
 //    //ultrasonic sensor
@@ -283,10 +290,13 @@ void loop (void)
 //    {
         ratio = lowpulseoccupancy/(sampletime_ms*10.0);  // Integer percentage 0=&gt;100
         concentration = 1.1*pow(ratio,3)-3.8*pow(ratio,2)+520*ratio+0.62; // using spec sheet curve
-        myfloat.val = concentration;
-        for(j = 0; j < 4; j++)
+        if (ratio != 0)
         {
-          sensorData[j+16] = myfloat.bytes[j];
+          myfloat.val = concentration;
+          for(j = 0; j < 4; j++)
+          {
+            sensorData[j+22] = myfloat.bytes[j];
+          }
         }
 //        Serial.print("ratio = ");
 //        Serial.print(ratio);
@@ -301,19 +311,19 @@ void loop (void)
 
     //sunlight sensor
     myint.val = sunlight.ReadVisible();
-    sensorData[20] = myint.bytes[0];
-    sensorData[21] = myint.bytes[1];
+    sensorData[26] = myint.bytes[0];
+    sensorData[27] = myint.bytes[1];
 //    Serial.print("Vis: "); 
         
     myint.val = sunlight.ReadIR();
-    sensorData[22] = myint.bytes[0];
-    sensorData[23] = myint.bytes[1];
+    sensorData[28] = myint.bytes[0];
+    sensorData[29] = myint.bytes[1];
 //    Serial.print("IR: "); Serial.println(myint.val);
     
     //the real UV value must be div 100 from the reg value , datasheet for more information.
     myint.val = sunlight.ReadUV();
-    sensorData[24] = myint.bytes[0];
-    sensorData[25] = myint.bytes[1];
+    sensorData[30] = myint.bytes[0];
+    sensorData[31] = myint.bytes[1];
 //    Serial.print("UV: "); Serial.println((float)myint.val/100);
     
 //    delay(5000);
