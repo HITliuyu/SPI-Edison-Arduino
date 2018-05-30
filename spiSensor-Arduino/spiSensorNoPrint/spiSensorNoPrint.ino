@@ -16,6 +16,8 @@
 #define sensor s_serial
 #define SS 10 //slave select pin
 #define BUFFSIZE 32
+#define PWM_pin_1 3 //pwm output for white led
+#define PWM_pin_2 9 // pwm output for yellow led
 //union definition
 union cvtfloat {
     float val;
@@ -65,8 +67,11 @@ SI114X sunlight = SI114X();
 uint8_t sensorData [BUFFSIZE];
 
 byte command = 0;
-int i;
+int i = 0;
+int j = 0;
 byte checksum;
+int pwm_duty_cycle[2] = {128, 128};
+bool pwm_duty_cycle_update_flag = true;
 
 void setup (void)
 {
@@ -95,6 +100,10 @@ void setup (void)
     {
       sunlight.Begin();
     }
+
+    //PWM output setting
+    pinMode(PWM_pin_1, OUTPUT);
+    pinMode(PWM_pin_2, OUTPUT);
     //variable initialization
     i = 0;
     checksum = 0;
@@ -141,7 +150,16 @@ ISR (SPI_STC_vect)
           SPDR = (checksum & 0xff);      
       } 
       break;
-  
+
+    //change PWM output
+    case 'b':
+        pwm_duty_cycle[j] = SPDR;
+        if (j >= 1)
+        {    
+            pwm_duty_cycle_update_flag = true;
+        }
+        j++;
+        break;
     } // end of switch        
 }  // end of interrupt routine SPI_STC_vect
 
@@ -163,6 +181,14 @@ void loop (void)
     for (j = 0; j < 4; j++)
     {
         sensorData[j+4] = myfloat.bytes[j];
+    }
+
+    //pwm output setting
+    if (pwm_duty_cycle_update_flag)
+    {
+        analogWrite(PWM_pin_1, pwm_duty_cycle[0]);
+        analogWrite(PWM_pin_2, pwm_duty_cycle[1]);
+        pwm_duty_cycle_update_flag = false;  
     }
     
      //multichannel sensor
@@ -333,7 +359,8 @@ void loop (void)
 void resetParam ()
 {
   command = 0;
-  i=0;
+  i = 0;
+  j = 0;
   checksum = 0;
 }  // end of interrupt service routine (ISR) resetParam
 
