@@ -12,10 +12,11 @@
 #include "SI114X.h" //sunlight
 
 #define DHTPIN A0 
+#define UltrasonicPin A1
 #define DHTTYPE DHT22   // DHT 11 
 #define sensor s_serial
 #define SS 10 //slave select pin
-#define BUFFSIZE 32
+#define BUFFSIZE 34
 #define PWM_pin_1 3 //pwm output for white led
 #define PWM_pin_2 9 // pwm output for yellow led
 //union definition
@@ -45,15 +46,15 @@ unsigned char dataRevice[9];
 int CO2PPM;
 SoftwareSerial s_serial(5, 6);      // RX, TX
 
-//ultrasonic sensor
-Ultrasonic ultrasonic(7);
-long RangeInCM;
+////ultrasonic sensor
+//Ultrasonic ultrasonic(7);
+//long RangeInCM;
 
 //PM sensor
 int pin = 8;
 unsigned long duration;
 unsigned long starttime;
-unsigned long sampletime_ms = 15000;//sampe 30s&nbsp;;
+unsigned long sampletime_ms = 15000;//15 seconds
 unsigned long lowpulseoccupancy = 0;
 float ratio = 0;
 float concentration = 0;
@@ -63,12 +64,13 @@ SI114X sunlight = SI114X();
 
 //buffer used to store sensor data
 //|0123.humidity|4567.temperature|8.9.10.11.ratio0|12.13.14.15.ratio1|16.17.18.19.ratio2|20.21.CO2PPM|22.23.24.25.PM concentration|26.27.light.visible|28.29.light.IR|
-//|30.31.light.UV*100|
+//|30.31.light.UV*100|32.33.Ultrasonic sensor|
 uint8_t sensorData [BUFFSIZE];
 
 byte command = 0;
 int i = 0;
 int j = 0;
+int k = 0;
 byte checksum;
 int pwm_duty_cycle[2] = {128, 128};
 bool pwm_duty_cycle_update_flag = true;
@@ -153,12 +155,12 @@ ISR (SPI_STC_vect)
 
     //change PWM output
     case 'b':
-        pwm_duty_cycle[j] = SPDR;
-        if (j >= 1)
+        pwm_duty_cycle[k] = SPDR;
+        if (k >= 1)
         {    
             pwm_duty_cycle_update_flag = true;
         }
-        j++;
+        k++;
         break;
     } // end of switch        
 }  // end of interrupt routine SPI_STC_vect
@@ -352,6 +354,10 @@ void loop (void)
     sensorData[31] = myint.bytes[1];
 //    Serial.print("UV: "); Serial.println((float)myint.val/100);
     
+    //read analog signal from ultrasonic sensor
+    myint.val = analogRead(UltrasonicPin);
+    sensorData[32] = myint.bytes[0];
+    sensorData[33] = myint.bytes[1];
 //    delay(5000);
  }  // end of loop
 
@@ -360,7 +366,7 @@ void resetParam ()
 {
   command = 0;
   i = 0;
-  j = 0;
+  k = 0;
   checksum = 0;
 }  // end of interrupt service routine (ISR) resetParam
 
