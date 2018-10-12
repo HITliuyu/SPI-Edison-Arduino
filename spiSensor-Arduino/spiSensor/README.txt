@@ -1,1 +1,0 @@
-This sketch is used for test new functions.
