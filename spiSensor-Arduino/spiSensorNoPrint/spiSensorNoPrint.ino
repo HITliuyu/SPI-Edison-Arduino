@@ -390,6 +390,7 @@ bool CO2dataRecieve(void)
             for(int i=0;i<9; i++)
             {
                 data[i] = sensor.read();
+                delay(1);
             }
         }
     }
