@@ -382,7 +382,7 @@ bool CO2dataRecieve(void)
         sensor.write(cmd_get_sensor[i]);
     }
     delay(10);
-    //begin reveiceing data
+    //begin receiving data
     if(sensor.available())
     {
         while(sensor.available())
